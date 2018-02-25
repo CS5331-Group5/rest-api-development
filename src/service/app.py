@@ -11,7 +11,7 @@ from flask import Flask, request
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import exc
+from sqlalchemy import exc, inspect
 
 app = Flask(__name__)
 # Enable cross origin sharing for all endpoints
@@ -30,6 +30,14 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://{user}:{pwd}@{host}/{db}'.forma
 db = SQLAlchemy(app)
 
 # DB Models
+class Diary(db.Model):
+    entry_id = db.Column(db.Integer, primary_key=True)
+    author_id = db.Column(db.Integer, nullable=False)
+    entry_date = db.Column(db.DateTime, nullable=False)
+    entry_title = db.Column(db.String)
+    entry_text = db.Column(db.String)
+    entry_is_public = db.Column(db.Boolean, nullable=False)
+
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(255), unique=True, nullable=False)
@@ -275,6 +283,43 @@ def users():
         "fullname": user.fullname,
         "age": user.age
     })
+
+
+@app.route("/diary", methods=["GET", "POST"])
+def diary_retrieve():
+    """Retrieve diary entries"""
+
+    if request.method == 'POST':
+        body = request.get_json(silent=True) or {}
+        token = str(body.get('token') or '')
+
+        authorNotFoundErr = "Invalid authentication token."
+
+        author = get_user(token)
+        if author is None:
+            return make_json_response(authorNotFoundErr, status=False)
+    
+        entry_list = Diary.query.filter_by(author_id=author.id).order_by(entry_id).all()
+    
+        return make_json_response(None, status=True, root={
+            "id": entry_list.username,
+            "title": entry_list.entry_title,
+            "author": entry_list.author_id,
+            "publish_date": entry_list.entry_date,
+            "public": entry_list.entry_is_public,
+            "text": entry_list.entry_text
+        })
+    else:
+        entry_list = Diary.query.filter_by(entry_is_public='true').order_by(entry_id).all()
+    
+        return make_json_response(status=True, root={
+            "id": entry_list.username,
+            "title": entry_list.entry_title,
+#            "author": entry_list.
+            "publish_date": entry_list.entry_date,
+            "public": entry_list.entry_is_public,
+            "text": entry_list.entry_text
+            })
 
 
 if __name__ == '__main__':
