@@ -3,14 +3,23 @@ extends ../layouts/layouts.pug
 block content
     h1.mb-5 Register
 
-    form
+    form#registerForm(v-on:submit.prevent="onSubmit")
+        .alert.alert-danger(v-if="error") {{ error }}
+
         .form-group
             label(for="inputUsername") Username
-            input#inputUsername.form-control(type="text")
+            input#inputUsername.form-control(v-model.trim="username" type="text")
         .form-group
             label(for="inputPassword") Password
-            input#inputPassword.form-control(type="password")
-        button.btn.btn-primary(type="Submit") Login
+            input#inputPassword.form-control(v-model.trim="password" type="password")
+        .form-group
+            label(for="inputFullname") Fullname
+            input#inputFullname.form-control(v-model.trim="fullname" type="text")
+        .form-group
+            label(for="inputAge") Age
+            input#inputAge.form-control(v-model.number="age" type="number" min="1" max="199")
+
+        button.btn.btn-primary(type="Submit" v-bind:disabled="hasSubmission") Login
 
 block scripts
     script(src="js/register.js")

@@ -1,0 +1,21 @@
+extends ../layouts/layouts.pug
+
+block content
+    h1.mb-5 New Diary
+
+    form
+        .form-group
+            label(for="inputTitle") Title
+            input#inputTitle.form-control(type="text")
+        .form-group
+            .form-check
+                input#inputPublic.form-check-input(type="checkbox")
+                label.form-check-label(for="inputPublic") Public
+        .form-group
+            label(for="inputText") Text Content
+            textarea#inputText.form-control(rows="6")
+
+        button.btn.btn-primary(type="Submit") Create
+
+block scripts
+    script(src="js/newdiary.js")

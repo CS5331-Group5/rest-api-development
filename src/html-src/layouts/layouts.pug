@@ -16,16 +16,21 @@ body
         button.navbar-toggler(type="button" data-toggle="collapse" data-target="#navbarToggler" aria-controls="navbarToggler" aria-expanded="false" aria-label="Toggle navigation")
             span.navbar-toggler-icon
 
-        #navbarToggler.collapse.navbar-collapse
-            ul.navbar-nav.mr-auto
-                li.nav-item.active
-                    a.nav-link(href="index.html") Home
+        #navbarToggler.collapse.navbar-collapse.justify-content-between
+            ul.navbar-nav
+                li.nav-item(v-for="item in menu(items)" v-bind:key="item.name" v-bind:class="{active: item.active}")
+                    a.nav-link(v-bind:href="item.url") {{ item.name }}
+
+            ul.navbar-nav(v-if="loggedIn")
                 li.nav-item
-                    a.nav-link(href="register.html") Register
+                    a.nav-link(href="#") Hi, {{ user && user.username }}
                 li.nav-item
-                    a.nav-link(href="login.html") Login
+                    a.nav-link(href="#" v-on:click="logout") Logout
 
     main.container.pt-md-5
+        #greeting
+            .alert.alert-success.mb-5(v-if="loggedIn") Hi, {{ user.fullname }}. Your username is {{ user.username }} and age is {{ user.age }}.
+
         block content
 
     footer.container.my-md-5.pt-md-5.border-top
@@ -42,11 +47,10 @@ body
                 ul#maintainers.list-unstyled.text-small
                     li.text-muted(v-for="item in people") {{ item }}
 
-    script(src="vendors/js/jquery-3.3.1.slim.min.js")
+    script(src="vendors/js/jquery-3.3.1.min.js")
     script(src="vendors/js/bootstrap.min.js")
     script(src="vendors/js/moment.min.js")
     script(src="vendors/js/vue.min.js")
-    script(src="js/components.js")
     script(src="js/common.js")
 
     block scripts
