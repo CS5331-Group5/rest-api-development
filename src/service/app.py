@@ -103,10 +103,13 @@ ENDPOINT_LIST = [
 ]
 
 
-def make_json_response(data, root={}, status=True, code=200):
+def make_json_response(data, root=None, status=True, code=200):
     """Utility function to create the JSON responses."""
 
-    to_serialize = root
+    to_serialize = {}
+    if root is not None:
+        to_serialize = root
+
     if status:
         to_serialize['status'] = True
         if data is not None:
@@ -173,7 +176,7 @@ def user_register():
         errors.append("Age must be within 1~199")
 
     if len(errors) > 0:
-        return make_json_response(errors, status=False)
+        return make_json_response(errors[0], status=False)
 
     user = User(
         username=username,
@@ -188,9 +191,9 @@ def user_register():
 
         return make_json_response(None, status=True, code=201)
     except exc.IntegrityError as err:
-        return make_json_response(["User already exists"], status=False)
+        return make_json_response("User already exists", status=False)
     except exc.SQLAlchemyError as err:
-        return make_json_response(["Please try again later"], status=False)
+        return make_json_response("Please try again later", status=False)
 
 
 @app.route("/users/authenticate", methods=["POST"])
@@ -201,19 +204,17 @@ def user_authenticate():
     username = str(body.get('username') or '')
     password = str(body.get('password') or '')
 
-    errors = []
-    if len(username) == 0:
-        errors.append("Username cannot be empty")
-    if len(password) == 0:
-        errors.append("Password cannot be empty")
-    if len(errors) > 0:
-        return make_json_response(None, status=False)
+    if len(username) == 0 or len(password) == 0:
+        return make_json_response("Username/Password cannot be empty",
+                                  status=False)
+
+    notFoundErr = "Username/Password not found"
 
     user = User.query.filter_by(username=username).first()
     if user is None:
-        return make_json_response(None, status=False)
+        return make_json_response(notFoundErr, status=False)
     elif user.is_locked():
-        return make_json_response(None, status=False)
+        return make_json_response(notFoundErr, status=False)
 
     if bcrypt.check_password_hash(user.encrypted_password, password):
         try:
@@ -222,7 +223,7 @@ def user_authenticate():
             db.session.commit()
         except exc.SQLAlchemyError as err:
             app.logger.info(err)
-            return make_json_response(None, status=False)
+            return make_json_response(notFoundErr, status=False)
 
         return make_json_response(None, root={'token': user.session_token})
 
@@ -233,7 +234,7 @@ def user_authenticate():
     except exc.SQLAlchemyError as err:
         app.logger.info(err)
 
-    return make_json_response(None, status=False)
+    return make_json_response(notFoundErr, status=False)
 
 
 @app.route("/users/expire", methods=["POST"])
