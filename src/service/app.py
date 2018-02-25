@@ -98,27 +98,28 @@ ENDPOINT_LIST = [
     '/meta/members',
     '/users/register',
     '/users/authenticate',
-    '/users/expire'
+    '/users/expire',
+    '/users'
 ]
 
 
-def make_json_response(data, dataKey='result', status=True, code=200):
+def make_json_response(data, root={}, status=True, code=200):
     """Utility function to create the JSON responses."""
 
-    to_serialize = {}
+    to_serialize = root
     if status:
         to_serialize['status'] = True
         if data is not None:
-            to_serialize[dataKey] = data
+            to_serialize['result'] = data
     else:
         to_serialize['status'] = False
         if data is not None:
             to_serialize['error'] = data
-    response = app.response_class(
+
+    return app.response_class(
         response=json.dumps(to_serialize),
         status=code,
         mimetype='application/json')
-    return response
 
 
 @app.route("/")
@@ -223,7 +224,7 @@ def user_authenticate():
             app.logger.info(err)
             return make_json_response(None, status=False)
 
-        return make_json_response(user.session_token, dataKey='token')
+        return make_json_response(None, root={'token': user.session_token})
 
     try:
         user.new_failed_login()
@@ -257,22 +258,22 @@ def user_expire():
     return make_json_response(None)
 
 
-@app.route("/users")
+@app.route("/users", methods=["POST"])
 def users():
-    """List all user accounts"""
+    """Retrieve user information"""
 
-    users = User.query.all()
-    if len(users) == 0:
-        return make_json_response(None)
-    else:
-        return make_json_response([{
-            "username": user.username,
-            "sign_in_count": user.sign_in_count,
-            "locked_at": str(user.locked_at),
-            "locked": user.is_locked(),
-            "session_token": user.session_token,
-            "session_created_at": str(user.session_created_at)
-        } for user in users])
+    body = request.get_json(silent=True) or {}
+    token = str(body.get('token') or '')
+
+    user = get_user(token)
+    if user is None:
+        return make_json_response(None, status=False)
+
+    return make_json_response(None, root={
+        "username": user.username,
+        "fullname": user.fullname,
+        "age": user.age
+    })
 
 
 if __name__ == '__main__':
