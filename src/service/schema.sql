@@ -10,3 +10,11 @@ CREATE TABLE diary_entry ( `entry_id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT UN
 
 # Create database index for diary entry table
 CREATE UNIQUE INDEX `diary_entry_table_index` ON `diary_entry` ( `entry_id` DESC);
+
+DROP TABLE IF EXISTS `user`;
+
+CREATE TABLE `user` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `username` VARCHAR(255) COLLATE utf8_unicode_ci NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
