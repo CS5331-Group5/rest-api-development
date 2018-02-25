@@ -16,5 +16,16 @@ DROP TABLE IF EXISTS `user`;
 CREATE TABLE `user` (
   `id` INT(11) NOT NULL AUTO_INCREMENT,
   `username` VARCHAR(255) COLLATE utf8_unicode_ci NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+  `encrypted_password` VARCHAR(255) COLLATE utf8_unicode_ci NOT NULL,
+  `fullname` VARCHAR(255) COLLATE utf8_unicode_ci NOT NULL,
+  `age` INT(11) NOT NULL DEFAULT 0,
+  `sign_in_count` INT(11) NOT NULL DEFAULT 0,
+  `locked_at` TIMESTAMP NULL DEFAULT NULL,
+  `session_token` VARCHAR(255) COLLATE utf8_unicode_ci NOT NULL,
+  `session_created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `index_user_on_username` (`username`),
+  UNIQUE KEY `index_user_on_session_token` (`session_token`)
+) ENGINE=INNODB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;

@@ -2,15 +2,22 @@
 
 import json
 import os
+import re
+import datetime
+import uuid
 
 from flask import Flask, request
 
+from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import exc
 
 app = Flask(__name__)
 # Enable cross origin sharing for all endpoints
 CORS(app)
+# Setup Bcrypt
+bcrypt = Bcrypt(app)
 # Setup SQLAlchemy app config
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://{user}:{pwd}@{host}/{db}'.format(
@@ -26,12 +33,45 @@ db = SQLAlchemy(app)
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(255), unique=True, nullable=False)
+    encrypted_password = db.Column(db.String(255), nullable=False)
+    fullname = db.Column(db.String(255), nullable=False)
+    age = db.Column(db.Integer, nullable=False)
+    sign_in_count = db.Column(db.Integer, nullable=False)
+    locked_at = db.Column(db.DateTime)
+    session_token = db.Column(db.String(255), unique=True, nullable=False)
+    session_created_at = db.Column(db.DateTime, nullable=False)
+
+    def is_locked(self):
+        return self.locked_at is not None
+
+    def is_session_token_expired(self):
+        expire_at = self.session_created_at + datetime.timedelta(hours=3)
+        return expire_at >= datetime.datetime.now()
 
     def __repr__(self):
         return '<User %r>' % self.username
 
+
+def authenticate(session_token):
+    """Authenticate a user by session_token"""
+
+    user = User.query.filter_by(session_token=session_token).first()
+    if user is None:
+        return None
+    elif user.is_session_token_expired():
+        return None
+    else:
+        return user
+
+
 # Remember to update this list
-ENDPOINT_LIST = ['/', '/meta/heartbeat', '/meta/members']
+ENDPOINT_LIST = [
+    '/',
+    '/meta/heartbeat',
+    '/meta/members',
+    '/users/register'
+]
+
 
 def make_json_response(data, status=True, code=200):
     """Utility function to create the JSON responses."""
@@ -74,17 +114,65 @@ def meta_members():
 @app.route("/users/register", methods=["POST"])
 def user_register():
     """Create a user account"""
-    user = User(username="Hello")
-    db.session.add(user)
-    db.session.commit()
-    return make_json_response(user.id)
+
+    body = request.get_json()
+
+    username = str(body.get('username') or '')
+    password = str(body.get('password') or '')
+    fullname = str(body.get('fullname') or '')
+    age = body.get('age') or 0
+
+    errors = []
+    if len(username) == 0:
+        errors.append("Username cannot be empty")
+
+    if len(password) == 0:
+        errors.append("Password cannot be empty")
+    elif re.match(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$",
+                  password) is None:
+        errors.append("Password must have minimum eight characters, " +
+                      "at least one uppercase letter, one lowercase letter " +
+                      "and one number")
+
+    if len(fullname) == 0:
+        errors.append("Fullname cannot be empty")
+
+    if not isinstance(age, int):
+        errors.append("Age must be an integer and cannot be empty")
+    elif age <= 0 or age > 199:
+        errors.append("Age must be within 1~199")
+
+    if len(errors) > 0:
+        return make_json_response(errors, status=False)
+
+    user = User(
+        username=username,
+        encrypted_password=bcrypt.generate_password_hash(password),
+        fullname=fullname,
+        age=age,
+        sign_in_count=0,
+        session_token=str(uuid.uuid4()),
+        session_created_at=datetime.datetime.now()
+    )
+
+    try:
+        db.session.add(user)
+        db.session.commit()
+
+        return make_json_response(None, status=True, code=201)
+    except exc.IntegrityError as err:
+        print(err)
+        return make_json_response(["Username is duplicated"], status=False)
+    except exc.SQLAlchemyError as err:
+        print(err)
+        return make_json_response(["Please try again later"], status=False)
 
 
 @app.route("/users")
 def users():
     """List all user accounts"""
-    users = User.query.all()
 
+    users = User.query.all()
     if len(users) == 0:
         return make_json_response(None)
     else:

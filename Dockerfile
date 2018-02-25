@@ -11,7 +11,7 @@ RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server \
     && apt-get install -y libmysqlclient-dev
 
-RUN pip install -U pip flask flask-cors Flask-SQLAlchemy MySQL-python
+RUN pip install -U pip flask flask-cors Flask-SQLAlchemy MySQL-python flask-bcrypt
 
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 RUN echo "$user    hard    nproc    20" >> /etc/security/limits.conf
