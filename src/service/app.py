@@ -39,7 +39,7 @@ class User(db.Model):
     sign_in_count = db.Column(db.Integer, nullable=False)
     locked_at = db.Column(db.DateTime)
     session_token = db.Column(db.String(255), unique=True, nullable=False)
-    session_created_at = db.Column(db.DateTime, nullable=False)
+    session_created_at = db.Column(db.DateTime)
 
     def new_failed_login(self):
         # Reset lock if lock is expired
@@ -49,7 +49,7 @@ class User(db.Model):
 
         # Increment failed attempts and set lock
         self.sign_in_count += 1
-        if self.sign_in_count > 3:
+        if self.sign_in_count >= 3:
             self.locked_at = datetime.datetime.now()
 
     def is_locked(self):
@@ -57,16 +57,20 @@ class User(db.Model):
             return False
 
         lock_expire_at = self.locked_at + datetime.timedelta(hours=1)
-        return lock_expire_at > datetime.datetime.now()
+        return lock_expire_at >= datetime.datetime.now()
 
-    def new_session(self):
-        self.sign_in_count = 1,
+    def new_session(self, reset=False):
+        self.sign_in_count = 0,
         self.locked_at = None
+
         self.session_token = str(uuid.uuid4()),
-        self.session_created_at = datetime.datetime.now()
+        if reset:
+            self.session_created_at = None
+        else:
+            self.session_created_at = datetime.datetime.now()
 
     def in_valid_session(self):
-        if self.sign_in_count == 0 or self.is_locked():
+        if self.session_created_at is None or self.is_locked():
             return False
         expire_at = self.session_created_at + datetime.timedelta(hours=3)
         return expire_at >= datetime.datetime.now()
@@ -81,7 +85,7 @@ def get_user(session_token):
     user = User.query.filter_by(session_token=session_token).first()
     if user is None:
         return None
-    elif user.is_valid_session():
+    elif user.in_valid_session():
         return user
     else:
         return None
@@ -93,7 +97,8 @@ ENDPOINT_LIST = [
     '/meta/heartbeat',
     '/meta/members',
     '/users/register',
-    '/users/authenticate'
+    '/users/authenticate',
+    '/users/expire'
 ]
 
 
@@ -140,8 +145,7 @@ def meta_members():
 def user_register():
     """Create a user account"""
 
-    body = request.get_json()
-
+    body = request.get_json(silent=True) or {}
     username = str(body.get('username') or '')
     password = str(body.get('password') or '')
     fullname = str(body.get('fullname') or '')
@@ -174,13 +178,10 @@ def user_register():
         username=username,
         encrypted_password=bcrypt.generate_password_hash(password),
         fullname=fullname,
-        age=age,
-        sign_in_count=0,
-        session_token=str(uuid.uuid4()),
-        session_created_at=datetime.datetime.now()
-    )
+        age=age)
 
     try:
+        user.new_session(reset=True)
         db.session.add(user)
         db.session.commit()
 
@@ -195,8 +196,7 @@ def user_register():
 def user_authenticate():
     """Authenticate a user by password and return a token"""
 
-    body = request.get_json()
-
+    body = request.get_json(silent=True) or {}
     username = str(body.get('username') or '')
     password = str(body.get('password') or '')
 
@@ -233,6 +233,28 @@ def user_authenticate():
         app.logger.info(err)
 
     return make_json_response(None, status=False)
+
+
+@app.route("/users/expire", methods=["POST"])
+def user_expire():
+    """Expire an authenticated token"""
+
+    body = request.get_json(silent=True) or {}
+    token = str(body.get('token') or '')
+
+    user = get_user(token)
+    if user is None:
+        return make_json_response(None, status=False)
+
+    try:
+        user.new_session(reset=True)
+        db.session.add(user)
+        db.session.commit()
+    except exc.SQLAlchemyError as err:
+        app.logger.info(err)
+        return make_json_response(None, status=False)
+
+    return make_json_response(None)
 
 
 @app.route("/users")
