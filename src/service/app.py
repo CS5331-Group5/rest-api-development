@@ -107,7 +107,9 @@ ENDPOINT_LIST = [
     '/users/register',
     '/users/authenticate',
     '/users/expire',
-    '/users'
+    '/users',
+    '/diary/create',
+    '/diary'
 ]
 
 
@@ -287,7 +289,7 @@ def users():
 
 @app.route("/diary", methods=["GET", "POST"])
 def diary_retrieve():
-    """Retrieve diary entries"""
+    """Retrieve user (POST) or public (GET) diary entries"""
 
     if request.method == 'POST':
         body = request.get_json(silent=True) or {}
@@ -320,6 +322,42 @@ def diary_retrieve():
             "public": entry_list.entry_is_public,
             "text": entry_list.entry_text
             })
+
+
+@app.route("/diary/create", methods=["POST"])
+def diary_get_user():
+    """Create a new diary entry"""
+
+    body = request.get_json(silent=True) or {}
+    token = str(body.get('token') or '')
+    title = str(body.get('title') or '')
+    public = body.get('public') or true
+    text = str(body.get('text') or '')
+    authorNotFoundErr = "Invalid authentication token."
+
+    author = get_user(token)
+    if author is None:
+        return make_json_response(authorNotFoundErr, status=False)
+
+    diary = Diary(
+        entry_date=datetime.datetime.now(),
+        entry_title=title,
+        entry_text=text,
+        entry_is_public=public,
+        author_id=author.id)
+
+    try:
+        diary.new_session(reset=True)
+        db.session.add(diary)
+        db.session.commit()
+
+        return make_json_response(None, status=True, root={
+            "result":diary.entry_date
+        })
+    except exc.IntegrityError as err:
+        return make_json_response("Something wrong with data", status=False)
+    except exc.SQLAlchemyError as err:
+        return make_json_response("Please try again later", status=False)
 
 
 if __name__ == '__main__':
