@@ -1,0 +1,1 @@
+$(function(){new Vue({el:"#health-check",data:{status:!0}}),new Vue({el:"#maintainers",data:{people:["Maintainer A","Maintainer B","Maintainer C"]}})});

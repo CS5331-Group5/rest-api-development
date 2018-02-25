@@ -1,0 +1,53 @@
+doctype html
+
+html
+    head
+        meta(charset="utf-8")
+        meta(name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no")
+
+        link(rel="stylesheet" href="vendors/css/bootstrap.min.css")
+
+        title Secret Diary
+
+body
+    nav.navbar.navbar-expand-md.navbar-dark.bg-dark
+        a.navbar-brand(href="index.html") Secret Diary
+
+        button.navbar-toggler(type="button" data-toggle="collapse" data-target="#navbarToggler" aria-controls="navbarToggler" aria-expanded="false" aria-label="Toggle navigation")
+            span.navbar-toggler-icon
+
+        #navbarToggler.collapse.navbar-collapse
+            ul.navbar-nav.mr-auto
+                li.nav-item.active
+                    a.nav-link(href="index.html") Home
+                li.nav-item
+                    a.nav-link(href="register.html") Register
+                li.nav-item
+                    a.nav-link(href="login.html") Login
+
+    main.container.pt-md-5
+        block content
+
+    footer.container.my-md-5.pt-md-5.border-top
+        div.row
+            div.col-6.col-md
+                h5 Health Check
+
+                #health-check
+                    span.badge.badge-pill(v-bind:class="{'badge-success': status, 'badge-dark': !status} ") {{ status ? 'Success' : 'Failed' }}
+
+            div.col-6.col-md
+                h5 Maintainers
+
+                ul#maintainers.list-unstyled.text-small
+                    li.text-muted(v-for="item in people") {{ item }}
+
+    script(src="vendors/js/jquery-3.3.1.slim.min.js")
+    script(src="vendors/js/bootstrap.min.js")
+    script(src="vendors/js/moment.min.js")
+    script(src="vendors/js/vue.min.js")
+    script(src="js/components.js")
+    script(src="js/common.js")
+
+    block scripts
+
