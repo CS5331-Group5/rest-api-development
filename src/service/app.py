@@ -41,10 +41,33 @@ class User(db.Model):
     session_token = db.Column(db.String(255), unique=True, nullable=False)
     session_created_at = db.Column(db.DateTime, nullable=False)
 
-    def is_locked(self):
-        return self.locked_at is not None
+    def new_failed_login(self):
+        # Reset lock if lock is expired
+        if self.locked_at is not None:
+            self.sign_in_count = 0
+            self.locked_at = None
 
-    def is_session_token_expired(self):
+        # Increment failed attempts and set lock
+        self.sign_in_count += 1
+        if self.sign_in_count > 3:
+            self.locked_at = datetime.datetime.now()
+
+    def is_locked(self):
+        if self.locked_at is None:
+            return False
+
+        lock_expire_at = self.locked_at + datetime.timedelta(hours=1)
+        return lock_expire_at > datetime.datetime.now()
+
+    def new_session(self):
+        self.sign_in_count = 1,
+        self.locked_at = None
+        self.session_token = str(uuid.uuid4()),
+        self.session_created_at = datetime.datetime.now()
+
+    def in_valid_session(self):
+        if self.sign_in_count == 0 or self.is_locked():
+            return False
         expire_at = self.session_created_at + datetime.timedelta(hours=3)
         return expire_at >= datetime.datetime.now()
 
@@ -52,16 +75,16 @@ class User(db.Model):
         return '<User %r>' % self.username
 
 
-def authenticate(session_token):
+def get_user(session_token):
     """Authenticate a user by session_token"""
 
     user = User.query.filter_by(session_token=session_token).first()
     if user is None:
         return None
-    elif user.is_session_token_expired():
-        return None
-    else:
+    elif user.is_valid_session():
         return user
+    else:
+        return None
 
 
 # Remember to update this list
@@ -69,21 +92,23 @@ ENDPOINT_LIST = [
     '/',
     '/meta/heartbeat',
     '/meta/members',
-    '/users/register'
+    '/users/register',
+    '/users/authenticate'
 ]
 
 
-def make_json_response(data, status=True, code=200):
+def make_json_response(data, dataKey='result', status=True, code=200):
     """Utility function to create the JSON responses."""
 
     to_serialize = {}
     if status:
         to_serialize['status'] = True
         if data is not None:
-            to_serialize['result'] = data
+            to_serialize[dataKey] = data
     else:
         to_serialize['status'] = False
-        to_serialize['error'] = data
+        if data is not None:
+            to_serialize['error'] = data
     response = app.response_class(
         response=json.dumps(to_serialize),
         status=code,
@@ -161,11 +186,53 @@ def user_register():
 
         return make_json_response(None, status=True, code=201)
     except exc.IntegrityError as err:
-        print(err)
-        return make_json_response(["Username is duplicated"], status=False)
+        return make_json_response(["User already exists"], status=False)
     except exc.SQLAlchemyError as err:
-        print(err)
         return make_json_response(["Please try again later"], status=False)
+
+
+@app.route("/users/authenticate", methods=["POST"])
+def user_authenticate():
+    """Authenticate a user by password and return a token"""
+
+    body = request.get_json()
+
+    username = str(body.get('username') or '')
+    password = str(body.get('password') or '')
+
+    errors = []
+    if len(username) == 0:
+        errors.append("Username cannot be empty")
+    if len(password) == 0:
+        errors.append("Password cannot be empty")
+    if len(errors) > 0:
+        return make_json_response(None, status=False)
+
+    user = User.query.filter_by(username=username).first()
+    if user is None:
+        return make_json_response(None, status=False)
+    elif user.is_locked():
+        return make_json_response(None, status=False)
+
+    if bcrypt.check_password_hash(user.encrypted_password, password):
+        try:
+            user.new_session()
+            db.session.add(user)
+            db.session.commit()
+        except exc.SQLAlchemyError as err:
+            app.logger.info(err)
+            return make_json_response(None, status=False)
+
+        return make_json_response(user.session_token, dataKey='token')
+
+    try:
+        user.new_failed_login()
+        db.session.add(user)
+        db.session.commit()
+    except exc.SQLAlchemyError as err:
+        app.logger.info(err)
+
+    return make_json_response(None, status=False)
 
 
 @app.route("/users")
@@ -176,7 +243,14 @@ def users():
     if len(users) == 0:
         return make_json_response(None)
     else:
-        return make_json_response([user.username for user in users])
+        return make_json_response([{
+            "username": user.username,
+            "sign_in_count": user.sign_in_count,
+            "locked_at": str(user.locked_at),
+            "locked": user.is_locked(),
+            "session_token": user.session_token,
+            "session_created_at": str(user.session_created_at)
+        } for user in users])
 
 
 if __name__ == '__main__':
