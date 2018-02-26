@@ -11,7 +11,7 @@ from flask import Flask, request
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import exc, inspect
+from sqlalchemy import exc, inspect, update
 
 app = Flask(__name__)
 # Enable cross origin sharing for all endpoints
@@ -325,13 +325,13 @@ def diary_retrieve():
 
 
 @app.route("/diary/create", methods=["POST"])
-def diary_get_user():
+def diary_create_entry():
     """Create a new diary entry"""
 
     body = request.get_json(silent=True) or {}
     token = str(body.get('token') or '')
     title = str(body.get('title') or '')
-    public = body.get('public') or true
+    is_public = body.get('public') or true
     text = str(body.get('text') or '')
     authorNotFoundErr = "Invalid authentication token."
 
@@ -343,7 +343,7 @@ def diary_get_user():
         entry_date=datetime.datetime.now(),
         entry_title=title,
         entry_text=text,
-        entry_is_public=public,
+        entry_is_public=is_public,
         author_id=author.id)
 
     try:
@@ -358,6 +358,57 @@ def diary_get_user():
         return make_json_response("Something wrong with data", status=False)
     except exc.SQLAlchemyError as err:
         return make_json_response("Please try again later", status=False)
+
+
+@app.route("/diary/delete", methods=["POST"])
+def diary_delete_entry():
+    """Deletes a diary entry"""
+
+    body = request.get_json(silent=True) or {}
+    token = str(body.get('token') or '')
+    entry_id = str(body.get('id') or '')
+
+    author = get_user(token)
+    if author is None:
+        return make_json_response(authorNotFoundErr, status=False)
+
+    diary = Diary(
+        entry_id=entry_id,
+        author_id=author.id)
+
+    try:
+        diary.new_session(reset=True)
+        db.session.delete(diary)
+        db.session.commit()
+
+        return make_json_response(None, status=True)
+    except exc.IntegrityError as err:
+        return make_json_response("Something wrong with data", status=False)
+    except exc.SQLAlchemyError as err:
+        return make_json_response("Please try again later", status=False)
+
+
+@app.route("/diary/permission", methods=["POST"])
+def diary_change_permission():
+    """Updates a diary entry permission"""
+
+    body = request.get_json(silent=True) or {}
+    token = str(body.get('token') or '')
+    entry_id = str(body.get('id') or '')
+    is_public = body.get('public') or ''
+
+    author = get_user(token)
+    if author is None:
+        return make_json_response(authorNotFoundErr, status=False)
+
+    diary = Diary(
+        entry_id=entry_id,
+        author_id=author.id,
+        entry_is_public=is_public)
+
+    try:
+        diary.new_session(reset=True)
+        db.session.commit()
 
 
 if __name__ == '__main__':
