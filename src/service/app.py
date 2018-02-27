@@ -42,12 +42,6 @@ class Diary(db.Model):
     entry_text = db.Column(db.String())
     entry_is_public = db.Column(db.Boolean, nullable=False)
 
-    def __init__(self, author_id, entry_date, entry_title, entry_text, entry_is_public):
-        self.author_id = author_id
-        self.entry_date = entry_date
-        self.entry_title = entry_title
-        self.entry_text = entry_text
-        self.entry_is_public = entry_is_public
 
 
 class DiarySchema(ma.ModelSchema):
@@ -110,14 +104,12 @@ def get_user(session_token):
     user = User.query.filter_by(session_token=session_token).first()
     if user is None:
         return None
-#    elif user.in_valid_session():
-#        return user
+    elif user.in_valid_session():
+        return user
     else:
-#        return None
-         return user
+        return None
 
 
-# Remember to update this list
 ENDPOINT_LIST = [
     '/',
     '/meta/heartbeat',
@@ -126,6 +118,8 @@ ENDPOINT_LIST = [
     '/users/authenticate',
     '/users/expire',
     '/users',
+    '/diary/permission',
+    '/diary/delete',
     '/diary/create',
     '/diary'
 ]
@@ -321,13 +315,13 @@ def diary_retrieve():
         diary_schema = DiarySchema(many=True)
         entry_list = Diary.query.filter_by(author_id=author.id).order_by(Diary.entry_id).all()
         result = diary_schema.dump(entry_list)
-        return jsonify(result)
+        return jsonify(result), 200
 
     else:
-        diary_schema = DiarySchema(many=True)
-        entry_list = Diary.query.filter_by(entry_is_public=True).order_by(Diary.entry_id).all()
-        result = diary_schema.dump(entry_list)
-        return jsonify(result.data)
+        cols = ['entry_id', 'entry_title', 'author_id', 'entry_date', 'entry_is_public', 'entry_text']
+        data = Diary.query.filter_by(entry_is_public=True).order_by(Diary.entry_id).all()
+        result = [{col: getattr(d, col) for col in cols} for d in data]
+        return jsonify(result=result)
 
 
 @app.route("/diary/create", methods=["POST"])
@@ -355,10 +349,9 @@ def diary_create_entry():
     try:
         db.session.add(diary)
         db.session.commit()
-        return make_json_response(None, status=True)
-#        return make_json_response(None, status=True, root={
-#            "result":diary.entry_date
-#        })
+        return make_json_response(None, status=True, root={
+            "result":diary.entry_id
+        })
     except exc.IntegrityError as err:
         return make_json_response("Something wrong with data", status=False)
     except exc.SQLAlchemyError as err:
@@ -383,7 +376,7 @@ def diary_delete_entry():
     try:
         db.session.delete(entry)
         db.session.commit()
-        return make_json_response("Success", status=True)
+        return make_json_response(None, status=True)
     except exc.IntegrityError as err:
         return make_json_response("Something wrong with data", status=False)
     except exc.SQLAlchemyError as err:
@@ -412,7 +405,6 @@ def diary_change_permission():
     entry = Diary.query.filter((Diary.entry_id==entry_id) & (Diary.author_id==author.id)).update({Diary.entry_is_public: is_public})
 
     try:
-#        db.session.update(diary)
         db.session.commit()
         return make_json_response(None, status=True)
     except exc.IntegrityError as err:
