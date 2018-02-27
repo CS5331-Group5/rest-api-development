@@ -28,7 +28,7 @@ WORKDIR /data
 RUN apt-get update && \
     apt-get install -y libmysqlclient-dev
 
-RUN pip install -U pip flask flask-cors Flask-SQLAlchemy MySQL-python flask-bcrypt
+RUN pip install -U pip flask flask-cors Flask-SQLAlchemy MySQL-python flask-bcrypt flask-marshmallow marshmallow-sqlalchemy
 
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 RUN echo "$user    hard    nproc    20" >> /etc/security/limits.conf

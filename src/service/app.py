@@ -7,11 +7,12 @@ import datetime
 import uuid
 
 from flask import Flask, request, jsonify
-
+from sqlalchemy.inspection import inspect
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import exc, inspect, update
+from flask_marshmallow import Marshmallow
+from sqlalchemy import exc, update
 
 app = Flask(__name__)
 # Enable cross origin sharing for all endpoints
@@ -29,18 +30,29 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://{user}:{pwd}@{host}/{db}'.forma
 # Setup SQLAlchemy
 db = SQLAlchemy(app)
 
+# Setup Flask-Marshmallow
+ma = Marshmallow(app)
+
 # DB Models
 class Diary(db.Model):
-    entry_id = db.Column(db.Integer, primary_key=True)
-    author_id = db.Column(db.Integer, nullable=False)
+    entry_id = db.Column(db.Integer(), primary_key=True)
+    author_id = db.Column(db.Integer(), nullable=False)
     entry_date = db.Column(db.DateTime, nullable=False)
-    entry_title = db.Column(db.String)
-    entry_text = db.Column(db.String)
+    entry_title = db.Column(db.String())
+    entry_text = db.Column(db.String())
     entry_is_public = db.Column(db.Boolean, nullable=False)
 
-    def serialize(self):
-        d = Serializer.serialize(self)
-        return d
+    def __init__(self, author_id, entry_date, entry_title, entry_text, entry_is_public):
+        self.author_id = author_id
+        self.entry_date = entry_date
+        self.entry_title = entry_title
+        self.entry_text = entry_text
+        self.entry_is_public = entry_is_public
+
+class DiarySchema(ma.ModelSchema):
+    class Meta:
+        model = Diary
+        fields = ('entry_id', 'entry_title', 'author_id', 'entry_date', 'entry_is_public', 'entry_text')
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -137,16 +149,6 @@ def make_json_response(data, root=None, status=True, code=200):
         response=json.dumps(to_serialize),
         status=code,
         mimetype='application/json')
-
-
-class Serializer(object):
-
-    def serialize(self):
-        return {c: getattr(self, c) for c in inspect(self).attrs.keys()}
-
-    @staticmethod
-    def serialize_list(l):
-        return [m.serialize() for m in l]
 
 
 @app.route("/")
@@ -325,11 +327,14 @@ def diary_retrieve():
 #            "public": entrylist.entry_is_public,
 #            "text": entrylist.entry_text
 #        })
-        return jsonify(entry_list)
+#        return jsonify(entry_list)
     else:
-        entry_list = Diary.query.filter_by(entry_is_public='true').order_by(Diary.entry_id).all()
-    
-#        return make_json_response(status=True, root={
+        diary_schema = DiarySchema(many=True)
+        entry_list = Diary.query.filter_by(entry_is_public=True).order_by(Diary.entry_id).all()
+        result = diary_schema.dump(entry_list)
+        return jsonify(result.data)
+
+#{
 #            "id": entrylist.entry_id,
 #            "title": entrylist.entry_title,
 #            "author": entrylist.
@@ -337,7 +342,7 @@ def diary_retrieve():
 #            "public": entrylist.entry_is_public,
 #            "text": entrylist.entry_text
 #            })
-        return jsonify(entry_list)
+#        return entry_list
 
 
 @app.route("/diary/create", methods=["POST"])
@@ -347,29 +352,28 @@ def diary_create_entry():
     body = request.get_json(silent=True) or {}
     token = str(body.get('token') or '')
     title = str(body.get('title') or '')
-    is_public = body.get('public') or true
+    is_public = body.get('public')
     text = str(body.get('text') or '')
-    authorNotFoundErr = "Invalid authentication token."
+#    authorNotFoundErr = "Invalid authentication token."
 
-    author = get_user(token)
-    if author is None:
-        return make_json_response(authorNotFoundErr, status=False)
+#    author = get_user(token)
+#    if author is None:
+#        return make_json_response(authorNotFoundErr, status=False)
 
     diary = Diary(
         entry_date=datetime.datetime.now(),
         entry_title=title,
         entry_text=text,
         entry_is_public=is_public,
-        author_id=author.id)
-
+        author_id=1)
+        
     try:
-        diary.new_session(reset=True)
         db.session.add(diary)
         db.session.commit()
-
-        return make_json_response(None, status=True, root={
-            "result":diary.entry_date
-        })
+        return make_json_response(None, status=True)
+#        return make_json_response(None, status=True, root={
+#            "result":diary.entry_date
+#        })
     except exc.IntegrityError as err:
         return make_json_response("Something wrong with data", status=False)
     except exc.SQLAlchemyError as err:
@@ -383,24 +387,21 @@ def diary_delete_entry():
     body = request.get_json(silent=True) or {}
     token = str(body.get('token') or '')
     entry_id = str(body.get('id') or '')
+    author_id = 1
+#    author = get_user(token)
+#    if author is None:
+#        return make_json_response(authorNotFoundErr, status=False)
 
-    author = get_user(token)
-    if author is None:
-        return make_json_response(authorNotFoundErr, status=False)
-
-    diary = Diary(
-        entry_id=entry_id,
-        author_id=author.id)
+    entry = Diary.query.filter_by(entry_id=entry_id).first()
 
     try:
-        diary.new_session(reset=True)
-        db.session.delete(diary)
+        db.session.delete(entry)
         db.session.commit()
         return make_json_response(None, status=True)
     except exc.IntegrityError as err:
         return make_json_response("Something wrong with data", status=False)
     except exc.SQLAlchemyError as err:
-        return make_json_response("Please try again later", status=False)
+        return make_json_response(err, status=False)
 
 
 @app.route("/diary/permission", methods=["POST"])
