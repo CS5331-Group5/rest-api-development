@@ -3,7 +3,10 @@ FROM ubuntu:latest
 ENV MYSQL_USER=root \
     MYSQL_PASSWORD= \
     MYSQL_HOST=localhost \
-    MYSQL_DATABASE=GROUP5_SECRET_DIARY
+    MYSQL_DATABASE=GROUP5_SECRET_DIARY \
+    TZ=Asia/Singapore
+
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN apt-get update \
     && apt-get install -y python-pip \
