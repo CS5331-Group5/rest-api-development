@@ -13,8 +13,7 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 from sqlalchemy import exc, update, and_
-#from marshmallow import Schema, fields
-#from json import dumps
+
 
 app = Flask(__name__)
 # Enable cross origin sharing for all endpoints
@@ -301,9 +300,6 @@ def users():
     })
 
 
-class DateTimeEncoder(json.JSONEncoder):    def default(self, o):        if isinstance(o, datetime):            return o.isoformat()        return json.JSONEncoder.default(self, o)
-
-
 @app.route("/diary", methods=["GET", "POST"])
 def diary_retrieve():
     """Retrieve user (POST) or public (GET) diary entries"""
@@ -356,7 +352,7 @@ def diary_create_entry():
         db.session.commit()
         return make_json_response(None, status=True, root={
             "result":diary.id
-        })
+        }, code=201)
     except exc.IntegrityError as err:
         return make_json_response("Something wrong with data", status=False)
     except exc.SQLAlchemyError as err:
