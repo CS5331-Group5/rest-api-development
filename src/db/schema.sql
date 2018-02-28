@@ -26,14 +26,14 @@ CREATE TABLE `user` (
 DROP TABLE IF EXISTS `diary`;
 
 CREATE TABLE `diary` (
-  `entry_id` INT NOT NULL AUTO_INCREMENT,
-  `author_id` INT(11) NOT NULL,
-  `entry_date` TIMESTAMP NULL DEFAULT NULL,
-  `entry_title` VARCHAR(100) COLLATE utf8_unicode_ci,
-  `entry_text` TEXT COLLATE utf8_unicode_ci,
-  `entry_is_public` BOOL NOT NULL,
-  PRIMARY KEY (`entry_id`),
-  UNIQUE KEY `index_user_on_entry_id` (`entry_id`)
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `author` VARCHAR(255) COLLATE utf8_unicode_ci NOT NULL,
+  `publish_date` TIMESTAMP NULL DEFAULT NULL,
+  `title` VARCHAR(100) COLLATE utf8_unicode_ci,
+  `text` TEXT COLLATE utf8_unicode_ci,
+  `public` BOOL NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `index_user_on_id` (`id`)
 ) ENGINE=INNODB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 
