@@ -1,1 +1,1 @@
-$(function(){});
+$(function(){sessionStorage.getItem("token")||(sessionStorage.setItem("message","Please log in!"),location.href="login.html");var e=new Vue({el:"#diaries",data:{entries:[]}});$.post(HOST+"/diary",JSON.stringify({token:sessionStorage.getItem("token")}),function(t){t.status&&(e.entries=t.result)})});

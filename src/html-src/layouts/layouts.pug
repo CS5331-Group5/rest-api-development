@@ -29,6 +29,7 @@ body
 
     main.container.pt-md-5
         #greeting
+            .alert.alert-info.mb-5(v-if="message") {{ message }}
             .alert.alert-success.mb-5(v-if="loggedIn") Hi, {{ user.fullname }}. Your username is {{ user.username }} and age is {{ user.age }}.
 
         block content

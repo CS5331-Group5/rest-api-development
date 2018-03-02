@@ -3,17 +3,19 @@ extends ../layouts/layouts.pug
 block content
     h1.mb-5 New Diary
 
-    form
+    form#newdiaryForm(v-on:submit.prevent="onSubmit")
+        .alert.alert-danger(v-if="error") {{ error }}
+
         .form-group
             label(for="inputTitle") Title
-            input#inputTitle.form-control(type="text")
+            input#inputTitle.form-control(v-model.trim="title" type="text")
         .form-group
             .form-check
-                input#inputPublic.form-check-input(type="checkbox")
+                input#inputPublic.form-check-input(v-model="isPublic" type="checkbox")
                 label.form-check-label(for="inputPublic") Public
         .form-group
             label(for="inputText") Text Content
-            textarea#inputText.form-control(rows="6")
+            textarea#inputText.form-control(v-model.trim="text" rows="6")
 
         button.btn.btn-primary(type="Submit") Create
 

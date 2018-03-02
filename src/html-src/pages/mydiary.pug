@@ -4,7 +4,7 @@ block content
     h1.mb-5 My Diaries
 
     #diaries
-        diary-entry(v-for="item in entries" v-bind:diary="item" v-bind:key="item.id")
+        diary-entry(editable="true" v-for="item in entries" v-bind:diary="item" v-bind:key="item.id")
 
 block scripts
     script(src="js/mydiary.js")

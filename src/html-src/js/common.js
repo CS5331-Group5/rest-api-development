@@ -69,10 +69,8 @@ $(function() {
         return menuItems;
       },
       logout: function() {
-        var token = sessionStorage.getItem("token");
-
         $.post(HOST + "/users/expire", JSON.stringify({
-          "token": token
+          "token": sessionStorage.getItem("token")
         }), function(data) {
           if (data.status) {
             sessionStorage.setItem("message", "You have logged out!");
@@ -88,22 +86,26 @@ $(function() {
     el: "#greeting",
     data: {
       loggedIn: false,
-      user: {}
+      user: {},
+      message: sessionStorage.getItem("message")
     }
   });
 
-  var token = sessionStorage.getItem("token");
+  if (sessionStorage.getItem("message")) {
+    sessionStorage.removeItem("message");
+    setTimeout(function() { greeting.message = undefined; }, 10000);
+  }
 
-  if (token) {
+  if (sessionStorage.getItem("token")) {
     $.post(HOST + "/users", JSON.stringify({
-      "token": token
+      "token": sessionStorage.getItem("token")
     }), function(data) {
       if (data.status) {
         navbar.loggedIn = true;
-        navbar.user = data;
+        navbar.user = data.result;
 
         greeting.loggedIn = true;
-        greeting.user = data;
+        greeting.user = data.result;
       } else {
         sessionStorage.removeItem("token");
       }
@@ -114,7 +116,7 @@ $(function() {
   var healthCheck = new Vue({
     el: "#health-check",
     data: {
-      status: true
+      status: false
     }
   });
 
@@ -133,6 +135,69 @@ $(function() {
   $.getJSON(HOST + "/meta/members", function(data) {
     if (!!data.status) {
       maintainers.people = data.result;
+    }
+  });
+
+  // Dairy
+  //
+  // {
+  //   "id": 1,
+  //   "title": "My First Project",
+  //   "author": "ashrugged",
+  //   "publish_date": "2013-02-27T13:37:00+00:00",
+  //   "public": true,
+  //   "text": "If you don't know, the thing to do is not to get scared, but to learn."
+  // }
+  //
+  Vue.component("diary-entry", {
+    props: ["diary", "editable"],
+    data: function() {
+      return {
+        error: undefined
+      };
+    },
+    template: '<div class="card mb-5">' +
+      '<div class="card-header">' +
+      '<span class="text-secondary">{{ moment(diary.publish_date).format("lll") }}</span> by ' +
+      '<strong>{{ diary.author }}</strong> ' +
+      '<span class="badge badge-primary" v-if="!diary.public">Private</span>' +
+      '</div>' +
+      '<div class="card-body">' +
+      '<h2 class="card-title">{{ diary.title }}</h2>' +
+      '<p class="card-text">{{ diary.text }}</p>' +
+      '</div>' +
+      '<div class="card-footer" v-if="editable && !error">' +
+      '<a href="#" class="card-link text-danger" v-on:click="deleteDiary">Delete</a>' +
+      '<a href="#" class="card-link" v-on:click="togglePermission">{{ diary.public ? "Make Private" : "Make Public" }}</a>' +
+      '</div>' +
+      '<div class="card-footer text-danger" v-if="editable && error">{{ error }}</div>' +
+      '</div>',
+    methods: {
+      togglePermission: function() {
+        $.post(HOST + "/diary/permission", JSON.stringify({
+          "token": sessionStorage.getItem("token"),
+          "id": this.diary.id,
+          "public": !this.diary.public
+        }), function(data) {
+          if (data.status) {
+            location.reload();
+          }
+
+          this.error = data.error;
+        });
+      },
+      deleteDiary: function() {
+        $.post(HOST + "/diary/delete", JSON.stringify({
+          "token": sessionStorage.getItem("token"),
+          "id": this.diary.id
+        }), function(data) {
+          if (data.status) {
+            location.reload();
+          }
+
+          this.error = data.error;
+        });
+      }
     }
   });
 
