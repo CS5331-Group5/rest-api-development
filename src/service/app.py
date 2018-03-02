@@ -31,8 +31,10 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://{user}:{pwd}@{host}/{db}'.forma
 # Setup SQLAlchemy
 db = SQLAlchemy(app)
 
+
 # Setup Flask-Marshmallow
 ma = Marshmallow(app)
+
 
 # DB Models
 class Diary(db.Model):
@@ -48,6 +50,10 @@ class DiarySchema(ma.ModelSchema):
     class Meta:
         model = Diary
         fields = ('id', 'title', 'author', 'publish_date', 'public', 'text')
+
+
+    def __repr__(self):
+        return '<Diary %r>' % self.entry_id
 
 
 class User(db.Model):
@@ -231,13 +237,11 @@ def user_authenticate():
         return make_json_response("Username/Password cannot be empty",
                                   status=False)
 
-    notFoundErr = "Username/Password not found"
-
     user = User.query.filter_by(username=username).first()
     if user is None:
-        return make_json_response(notFoundErr, status=False)
+        return make_json_response(None, status=False)
     elif user.is_locked():
-        return make_json_response(notFoundErr, status=False)
+        return make_json_response(None, status=False)
 
     if bcrypt.check_password_hash(user.encrypted_password, password):
         try:
@@ -246,9 +250,9 @@ def user_authenticate():
             db.session.commit()
         except exc.SQLAlchemyError as err:
             app.logger.info(err)
-            return make_json_response(notFoundErr, status=False)
+            return make_json_response(None, status=False)
 
-        return make_json_response(None, root={'token': user.session_token})
+        return make_json_response({'token': user.session_token})
 
     try:
         user.new_failed_login()
@@ -257,7 +261,7 @@ def user_authenticate():
     except exc.SQLAlchemyError as err:
         app.logger.info(err)
 
-    return make_json_response(notFoundErr, status=False)
+    return make_json_response(None, status=False)
 
 
 @app.route("/users/expire", methods=["POST"])
@@ -293,7 +297,7 @@ def users():
     if user is None:
         return make_json_response(None, status=False)
 
-    return make_json_response(None, root={
+    return make_json_response({
         "username": user.username,
         "fullname": user.fullname,
         "age": user.age
