@@ -354,9 +354,7 @@ def diary_create_entry():
     try:
         db.session.add(diary)
         db.session.commit()
-        return make_json_response(None, status=True, root={
-            "result":diary.id
-        }, code=201)
+        return make_json_response({"id": diary.id}, code=201)
     except exc.IntegrityError as err:
         return make_json_response("Something wrong with data", status=False)
     except exc.SQLAlchemyError as err:
