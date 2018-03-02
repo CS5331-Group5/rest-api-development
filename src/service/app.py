@@ -29,6 +29,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://{user}:{pwd}@{host}/{db}'.forma
 # Setup SQLAlchemy
 db = SQLAlchemy(app)
 
+
 # DB Models
 class Diary(db.Model):
     entry_id = db.Column(db.Integer, primary_key=True)
@@ -37,6 +38,10 @@ class Diary(db.Model):
     entry_title = db.Column(db.String)
     entry_text = db.Column(db.String)
     entry_is_public = db.Column(db.Boolean, nullable=False)
+
+    def __repr__(self):
+        return '<Diary %r>' % self.entry_id
+
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -218,13 +223,11 @@ def user_authenticate():
         return make_json_response("Username/Password cannot be empty",
                                   status=False)
 
-    notFoundErr = "Username/Password not found"
-
     user = User.query.filter_by(username=username).first()
     if user is None:
-        return make_json_response(notFoundErr, status=False)
+        return make_json_response(None, status=False)
     elif user.is_locked():
-        return make_json_response(notFoundErr, status=False)
+        return make_json_response(None, status=False)
 
     if bcrypt.check_password_hash(user.encrypted_password, password):
         try:
@@ -233,9 +236,9 @@ def user_authenticate():
             db.session.commit()
         except exc.SQLAlchemyError as err:
             app.logger.info(err)
-            return make_json_response(notFoundErr, status=False)
+            return make_json_response(None, status=False)
 
-        return make_json_response(None, root={'token': user.session_token})
+        return make_json_response({'token': user.session_token})
 
     try:
         user.new_failed_login()
@@ -244,7 +247,7 @@ def user_authenticate():
     except exc.SQLAlchemyError as err:
         app.logger.info(err)
 
-    return make_json_response(notFoundErr, status=False)
+    return make_json_response(None, status=False)
 
 
 @app.route("/users/expire", methods=["POST"])
@@ -280,7 +283,7 @@ def users():
     if user is None:
         return make_json_response(None, status=False)
 
-    return make_json_response(None, root={
+    return make_json_response({
         "username": user.username,
         "fullname": user.fullname,
         "age": user.age
@@ -300,9 +303,9 @@ def diary_retrieve():
         author = get_user(token)
         if author is None:
             return make_json_response(authorNotFoundErr, status=False)
-    
+
         entry_list = Diary.query.filter_by(author_id=author.id).order_by(entry_id).all()
-    
+
         return make_json_response(None, status=True, root={
             "id": entry_list.username,
             "title": entry_list.entry_title,
@@ -313,7 +316,7 @@ def diary_retrieve():
         })
     else:
         entry_list = Diary.query.filter_by(entry_is_public='true').order_by(entry_id).all()
-    
+
         return make_json_response(status=True, root={
             "id": entry_list.username,
             "title": entry_list.entry_title,
