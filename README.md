@@ -94,12 +94,11 @@ project. Feel free to include more than one.
 
 Please fill out this section with details relevant to your team.
 
-### Team Members
+### Team Members (Group 5)
 
-1. Member 1 Name
-2. Member 2 Name
-3. Member 3 Name
-4. Member 4 Name
+1. Member 1 Hu Shuchen
+2. Member 2 Wang Zhuochun
+3. Member 3 Arvee Vergara Valmores
 
 ### Short Answer Questions
 
@@ -131,13 +130,16 @@ Answer: Please replace this sentence with your answer.
 
 #### Please declare your individual contributions to the assignment:
 
-1. Member 1 Name
-    - Integrated feature x into component y
-    - Implemented z
-2. Member 2 Name
-    - Wrote the front-end code
-3. Member 3 Name
-    - Designed the database schema
-4. Member 4 Name
-    - Implemented x
+1. Member 1 Hu Shuchen
+    - Wrote the front-end code and integrated with the API features developed by teammates
+    - Tested and checked the work done by teammates
+    - Logistics (set up Github organization, short answer questions)
+2. Member 2 Wang Zhuochun
+    - Developed the Users API
+    - Designed the database schema for Users
+    - Tested and checked the work done by teammates
+3. Member 3 Arvee Vergara Valmores
+    - Developed the Diary API
+    - Designed the database schema for Diary entries
+    - Tested and checked the work done by teammates
 
