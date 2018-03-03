@@ -116,6 +116,14 @@ def get_user(session_token):
     else:
         return None
 
+        
+def is_blank (input_string):
+    """Returns true if input is empty or blank"""
+    if input_string and input_string.strip():
+        return False
+    else:
+        return True
+
 
 ENDPOINT_LIST = [
     '/',
@@ -222,7 +230,7 @@ def user_register():
     except exc.IntegrityError as err:
         return make_json_response("User already exists", status=False)
     except exc.SQLAlchemyError as err:
-        return make_json_response("Please try again later", status=False)
+        return make_json_response("Something went wrong. Please try again later.", status=False)
 
 
 @app.route("/users/authenticate", methods=["POST"])
@@ -343,6 +351,12 @@ def diary_create_entry():
     author = get_user(token)
     if author is None:
         return make_json_response(authorNotFoundErr, status=False)
+    elif is_blank(entry_title):
+        return make_json_response("Title cannot be blank.",status=False)
+    elif is_blank(entry_text):
+        return make_json_response("Text cannot be blank.",status=False)
+    elif not isinstance(is_public, bool):
+        return make_json_response("Valid public flag is required.",status=False)
 
     diary = Diary(
         publish_date=datetime.datetime.now(),
@@ -356,9 +370,9 @@ def diary_create_entry():
         db.session.commit()
         return make_json_response({"id": diary.id}, code=201)
     except exc.IntegrityError as err:
-        return make_json_response("Something wrong with data", status=False)
+        return make_json_response("Invalid input. Verify input data and try again.", status=False)
     except exc.SQLAlchemyError as err:
-        return make_json_response("Please try again later", status=False)
+        return make_json_response("Something went wrong. Please try again later.", status=False)
 
 
 @app.route("/diary/delete", methods=["POST"])
@@ -367,12 +381,21 @@ def diary_delete_entry():
 
     body = request.get_json(silent=True) or {}
     token = str(body.get('token') or '')
-    entry_id = str(body.get('id') or '')
+    entry_id = body.get('id')
     authorNotFoundErr = "Invalid authentication token."
 
     author = get_user(token)
     if author is None:
         return make_json_response(authorNotFoundErr, status=False)
+    elif not isinstance(entry_id, int):
+        return make_json_response("Valid ID is required.",status=False)
+    elif entry_id < 1:
+        return make_json_response("Valid ID is required.",status=False)
+    
+    entry_count = Diary.query.filter((Diary.id==entry_id) & (Diary.author==author.username)).count()
+
+    if (entry_count == 0) or (entry_count > 1):
+        return make_json_response("Entry does not exist, or you do not have permission to delete this entry.", status=False)
 
     entry = Diary.query.filter((Diary.id==entry_id) & (Diary.author==author.username)).first()
 
@@ -381,9 +404,9 @@ def diary_delete_entry():
         db.session.commit()
         return make_json_response(None, status=True)
     except exc.IntegrityError as err:
-        return make_json_response("Something wrong with data", status=False)
+        return make_json_response("Invalid input. Verify input data and try again.", status=False)
     except exc.SQLAlchemyError as err:
-        return make_json_response("Entry does not exist, or you do not have permission to delete this entry.", status=False)
+        return make_json_response("Something went wrong. Please try again later.", status=False)
 
 
 @app.route("/diary/permission", methods=["POST"])
@@ -411,9 +434,9 @@ def diary_change_permission():
         db.session.commit()
         return make_json_response(None, status=True)
     except exc.IntegrityError as err:
-        return make_json_response("Something wrong with data", status=False)
+        return make_json_response("Invalid input. Verify input data and try again.", status=False)
     except exc.SQLAlchemyError as err:
-        return make_json_response("Please try again later", status=False)
+        return make_json_response("Something went wrong. Please try again later.", status=False)
 
 
 if __name__ == '__main__':
