@@ -109,13 +109,14 @@ Answer: We have used Flask web framework, MySQL for database schema, Vue.js for 
 #### Question 2: Are there any security considerations your team thought about?
 
 Answer: We have enforced user password strength with minimum length of 8 characters, containing both small and capitals letters as well as at one number. We have also implemented account lockout policy where the user account will be locked for 1 hour after 3 failed login attempts.
-We have also made use of mature library SQLAlchemy to enforce our protection against SQL injection attacks.
+As we are using MySQL for our database, we have also made use of the mature library SQLAlchemy, and utilized prepared statements in the backend codes to enforce our protection against SQL injection attacks.
 
 #### Question 3: Are there any improvements you would make to the API specification to improve the security of the web application?
 
 Answer: - Enforce authentication token expiry for certain duration or inactivity. This can reduce the risk of stolen tokens through XSS or other types of attacks.
         - Allow password reset or change of password with security measures
         - Implement 2-factor or multi-factor user authentication
+        - Implement HTTPS to encrypt JSON requests and responses over the network
 
 #### Question 4: Are there any additional features you would like to highlight?
 
@@ -123,7 +124,7 @@ Answer: Not other than the password strength and account lockout policy. Passwor
 
 #### Question 5: Is your web application vulnerable? If yes, how and why? If not, what measures did you take to secure it?
 
-Answer: We did not find our application vulnerable. In our development, we have made sure to use of mature libraries with functions to render user inputs like their diaries just as text rather than scripts. We have tested possibilities of cross-site scriting as shown in the screenshot below and our application is not vulnerable to those.
+Answer: We did not find our application vulnerable. In our development, we have made sure to use of mature libraries with functions to render user inputs like their diaries just as text rather than scripts. We have tested possibilities of cross-site scripting as shown in the screenshot below and our application is not vulnerable to those.
 
 ![Sample Screenshot](./img/XSS%20test.png)
 
