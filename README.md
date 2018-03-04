@@ -125,7 +125,8 @@ Answer: Not other than the password strength and account lockout policy. Passwor
 
 Answer: We did not find our application vulnerable. In our development, we have made sure to use of mature libraries with functions to render user inputs like their diaries just as text rather than scripts. We have tested possibilities of cross-site scriting as shown in the screenshot below and our application is not vulnerable to those.
 
-![Sample Screenshot]("./img/XSS test.png")
+![Sample Screenshot](./img/XSS%20test.png)
+
 
 #### Feedback: Is there any other feedback you would like to give?
 
