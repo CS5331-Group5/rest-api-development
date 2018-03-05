@@ -140,7 +140,7 @@ Answer: No.
 1. Member 1 Hu Shuchen
     - Wrote the front-end code and integrated with the API features developed by teammates
     - Tested and checked the work done by teammates
-    - Logistics (set up Github organization, short answer questions)
+    - Logistics (set up Github organization, README documentation & short answer questions)
 2. Member 2 Wang Zhuochun
     - Developed the Users API
     - Designed the database schema for Users
