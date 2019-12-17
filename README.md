@@ -150,4 +150,3 @@ Answer: No.
     - Designed the database schema for Diary entries
     - Tested and checked the work done by teammates
 
-### Cloned 17 December 2019
